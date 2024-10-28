@@ -60,7 +60,6 @@ app.get('/api/persons/:id', (request, response) => {
 
 app.post('/api/persons', (request, response) => {
   const body = request.body;
-  console.log(body);
 
   if (!body.name || !body.number) {
     return response.status(400).json({
@@ -79,8 +78,8 @@ app.post('/api/persons', (request, response) => {
     name: body.name,
     number: body.number
   };
-  persons.concat(person);
-  response.status(201).json(person);
+  persons = persons.concat(person);
+  response.status(201).json(persons);
 });
 
 app.delete('/api/persons/:id', (request, response) => {

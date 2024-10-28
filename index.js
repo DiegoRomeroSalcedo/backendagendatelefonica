@@ -5,9 +5,10 @@ const app = express();
 
 process.env.PORT;
 
-app.use(morgan('tiny'))
+app.use(morgan('tiny'));
 app.use(express.json());
 app.use(cors());
+app.use(express.static('dist')); // Con esta linea hacemos que express pueda servir archivos estaticos desde el backend.
 
 let persons = [
     { 
@@ -30,7 +31,7 @@ let persons = [
       "name": "Mary Poppendieck", 
       "number": "39-23-6423122"
     }
-]
+];
 
 app.get('/info', (request, response) => {
   const people = persons.length;
@@ -40,11 +41,11 @@ app.get('/info', (request, response) => {
      <p>${date}</p>
     `
   );
-})
+});
 
 app.get('/api/persons', (request, response) => {
   response.json(persons);
-})
+});
 
 app.get('/api/persons/:id', (request, response) => {
   const id = Number(request.params.id);
@@ -55,7 +56,7 @@ app.get('/api/persons/:id', (request, response) => {
   } else {
     response.status(404).end();
   }
-})
+});
 
 app.post('/api/persons', (request, response) => {
   const body = request.body;
@@ -77,8 +78,7 @@ app.post('/api/persons', (request, response) => {
     id: Math.floor(Math.random() * 10000),
     name: body.name,
     number: body.number
-  }
-
+  };
   persons.concat(person);
   response.status(201).json(person);
 });
@@ -93,7 +93,7 @@ app.delete('/api/persons/:id', (request, response) => {
   } else {
     response.status(404).json({erro: 'Persona no encontrada'});
   }
-})
+});
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {

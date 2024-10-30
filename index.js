@@ -2,13 +2,15 @@ const express = require('express');
 const morgan = require('morgan');
 const cors = require('cors');
 const app = express();
-
-process.env.PORT;
+require('dotenv').config();
 
 app.use(morgan('tiny'));
 app.use(express.json());
 app.use(cors());
 app.use(express.static('dist')); // Con esta linea hacemos que express pueda servir archivos estaticos desde el backend.
+
+
+const Phone = require('./models/phone');
 
 let persons = [
     { 
@@ -44,55 +46,74 @@ app.get('/info', (request, response) => {
 });
 
 app.get('/api/persons', (request, response) => {
-  response.json(persons);
-});
-
-app.get('/api/persons/:id', (request, response) => {
-  const id = Number(request.params.id);
-  const person = persons.find(person => person.id === id);
-
-  if (person) {
+  Phone.find({}).then(person => {
     response.json(person);
-  } else {
-    response.status(404).end();
-  }
+  });
 });
 
-app.post('/api/persons', (request, response) => {
+app.get('/api/persons/:id', (request, response, next) => {
+  Phone.findById(request.params.id)
+  .then(phone => {
+    if (phone) {
+      response.json(phone);
+    } else {
+      response.status(404).end();
+    }
+  })
+  .catch(error => next(error));
+});
+
+app.post('/api/persons', (request, response, next) => {
   const body = request.body;
 
-  if (!body.name || !body.number) {
-    return response.status(400).json({
-      error: "Content missing"
-    });
-  }
-
-  if(persons.some(person => person.name.toLocaleLowerCase() == body.name.toLocaleLowerCase())) {
-    return response.status(409).json({
-      error: "Conflict, resource is already created"
-    });
-  }
-
-  const person = {
-    id: Math.floor(Math.random() * 10000),
+  const phone = new Phone({
     name: body.name,
-    number: body.number
-  };
-  persons = persons.concat(person);
-  response.status(201).json(persons);
+    number: body.number,
+  });
+
+  phone.save()
+  .then(savedPhone => {
+    response.json(savedPhone);
+  })
+  .catch(error => next(error));
+
 });
 
-app.delete('/api/persons/:id', (request, response) => {
-  const id = Number(request.params.id);
-  const personIndex = persons.findIndex(person => person.id === id);
-
-  if (personIndex !== -1) {
-    persons.splice(personIndex, 1); // Elimina la persona del array.
+app.delete('/api/persons/:id', (request, response, next) => {
+  Phone.findByIdAndDelete(request.params.id)
+  .then(result => {
     response.status(204).end();
-  } else {
-    response.status(404).json({erro: 'Persona no encontrada'});
-  }
+  })
+  .catch(error => next(error));
 });
+
+app.put('/api/persons/:id', (request, response, next) => {
+  const { name, number } = request.body;
+
+  Phone.findByIdAndUpdate(
+      request.params.id,
+      { name, number },
+      {new: true, runValidators: true, context: 'query'}
+  )
+  .then(updatePhone => {
+    response.json(updatePhone);
+  })
+  .catch(error => next(error));
+});
+
+const errorHandler = (error, request, response, next) => {
+  console.error(error.message);
+
+  if (error.name === 'CastError') {
+    return response.status(400).send({Error: 'malformatted id'});
+  } else if (error.name === 'ValidationError') {
+    return response.status(400).json({error: error.message});
+  }
+
+  next(error);
+};
+
+app.use(errorHandler);
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
